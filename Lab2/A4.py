@@ -53,9 +53,7 @@ print(missing_df[missing_df["Missing Count"] > 0])
 
 
 
-# ==============================================================================
-# 5. Summary Statistics: Mean, Variance, and Standard Deviation
-# ==============================================================================
+
 print("\n--- MEAN, VARIANCE, AND STANDARD DEVIATION ---")
 stats_df = pd.DataFrame(
     {
