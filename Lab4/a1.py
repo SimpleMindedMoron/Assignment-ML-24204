@@ -84,44 +84,88 @@ if __name__ == '__main__':
     # Run the tests
     unittest.main(argv=['first-arg-is-ignored'], exit=False)
 
-#Q3
-import time
+
 import random
 
-# Generated using Gemini AI
-def benchmark_kmeans(data, k, iterations=5):
-    """
-    Compares the execution time of two different K-means implementations.
-    """
-    print(f"Benchmarking K-Means with K={k} over {iterations} runs...")
+def kmeans_me(data, k, max_iterations=100):
+    num_features = len(data[0])
+    centroids = random.sample(data, k)
     
-    # Time AI version
+    for _ in range(max_iterations):
+        clusters = [[] for _ in range(k)]
+        for point in data:
+            distances = []
+            for c in centroids:
+                dist = sum((point[f] - c[f]) ** 2 for f in range(num_features)) ** 0.5
+                distances.append(dist)
+            closest_idx = distances.index(min(distances))
+            clusters[closest_idx].append(point)
+            
+        new_centroids = []
+        for cluster in clusters:
+            if not cluster:
+                continue
+            cluster_mean = [sum(pt[f] for pt in cluster) / len(cluster) for f in range(num_features)]
+            new_centroids.append(cluster_mean)
+            
+        if centroids == new_centroids:
+            break
+        centroids = new_centroids
+        
+    return clusters, centroids
+
+import numpy as np
+
+def kmeans_ai(data, k, max_iterations=100, tol=1e-4):
+    X = np.asarray(data)
+    idx = np.random.choice(X.shape[0], k, replace=False)
+    centroids = X[idx]
+    
+    for _ in range(max_iterations):
+        distances = np.linalg.norm(X[:, np.newaxis, :] - centroids, axis=2)
+        labels = np.argmin(distances, axis=1)
+        
+        new_centroids = np.array([
+            X[labels == i].mean(axis=0) if np.any(labels == i) else centroids[i]
+            for i in range(k)
+        ])
+        
+        if np.all(np.linalg.norm(new_centroids - centroids, axis=1) < tol):
+            break
+        centroids = new_centroids
+        
+    clusters = [X[labels == i].tolist() for i in range(k)]
+    return clusters, centroids.tolist()
+
+import time
+
+def benchmark_implementations(data, k, iterations=10):
+    my_times = []
+    for _ in range(iterations):
+        start_time = time.perf_counter()
+        kmeans_me(data, k)
+        my_times.append(time.perf_counter() - start_time)
+        
     ai_times = []
     for _ in range(iterations):
         start_time = time.perf_counter()
-        # Replace with the AI generated function
-        kmeans_clustering(data, k) 
+        kmeans_ai(data, k)
         ai_times.append(time.perf_counter() - start_time)
         
-    # Time Own Version (Placeholder for your custom implementation)
-    own_times = []
-    for _ in range(iterations):
-        start_time = time.perf_counter()
-        # Replace with your manual implementation: kmeans_clustering_own(data, k)
-        kmeans_clustering(data, k) # Dummy call for illustration
-        own_times.append(time.perf_counter() - start_time)
-        
-    avg_ai_time = sum(ai_times) / iterations
-    avg_own_time = sum(own_times) / iterations
+    avg_me = sum(my_times) / iterations
+    avg_ai = sum(ai_times) / iterations
     
-    print("-" * 30)
-    print(f"AI Version Avg Time:  {avg_ai_time:.5f} seconds")
-    print(f"Own Version Avg Time: {avg_own_time:.5f} seconds")
-    print(f"Difference:           {abs(avg_ai_time - avg_own_time):.5f} seconds")
+    print("-" * 40)
+    print("Performance Comparison Results")
+    print("-" * 40)
+    print(f"My Version Avg Time: {avg_me:.5f} seconds")
+    print(f"AI Version Avg Time: {avg_ai:.5f} seconds")
+    print(f"Speed Difference:    {abs(avg_me - avg_ai):.5f} seconds")
+    if avg_ai > 0:
+        print(f"Performance Ratio:   AI is {avg_me / avg_ai:.2f}x faster")
 
-# Dummy data generation for the performance test
-dummy_data = [[random.uniform(0, 100) for _ in range(5)] for _ in range(1000)]
-
-# Run the performance comparison
-benchmark_kmeans(dummy_data, k=3)
+if __name__ == '__main__':
+    np.random.seed(42)
+    sample_data = np.random.rand(1500, 10).tolist()
+    benchmark_implementations(sample_data, k=5)
 
